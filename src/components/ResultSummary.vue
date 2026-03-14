@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { jsPDF } from 'jspdf'
 
 const props = defineProps({
   /**
@@ -14,14 +15,120 @@ const props = defineProps({
       v === undefined ||
       (Array.isArray(v.pros) && Array.isArray(v.cons) && Array.isArray(v.improvement_tips)),
   },
+  /** Full list of conversation messages for this session */
+  messages: {
+    type: Array,
+    default: () => [],
+  },
 })
 
-const hasSummary = computed(() => props.summary && (props.summary.pros?.length || props.summary.cons?.length || props.summary.improvement_tips?.length))
+const hasSummary = computed(
+  () =>
+    props.summary &&
+    (props.summary.pros?.length ||
+      props.summary.cons?.length ||
+      props.summary.improvement_tips?.length)
+)
 
 function severityClass(severity) {
   if (severity === 'high') return 'text-amber-600'
   if (severity === 'mid') return 'text-slate-600'
   return 'text-slate-500'
+}
+
+function exportPdf() {
+  if (!props.summary && !props.messages.length) return
+
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 15
+  let y = 20
+  const lineHeight = 6
+  const maxWidth = pageWidth - margin * 2
+
+  function ensureSpace(lines = 1) {
+    if (y + lines * lineHeight > pageHeight - margin) {
+      doc.addPage()
+      y = margin
+    }
+  }
+
+  function addTitle(text) {
+    ensureSpace(2)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(18)
+    doc.text(text, margin, y)
+    y += lineHeight + 2
+  }
+
+  function addSubTitle(text) {
+    ensureSpace(2)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(13)
+    doc.text(text, margin, y)
+    y += lineHeight
+  }
+
+  function addTextBlock(text, options = {}) {
+    if (!text) return
+    const { fontSize = 10, bold = false, extraGap = 2 } = options
+    doc.setFont('helvetica', bold ? 'bold' : 'normal')
+    doc.setFontSize(fontSize)
+    const lines = doc.splitTextToSize(String(text), maxWidth)
+    ensureSpace(lines.length)
+    doc.text(lines, margin, y)
+    y += lines.length * lineHeight + extraGap
+  }
+
+  // Title and timestamp
+  addTitle('Debate Report')
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.text(new Date().toLocaleString(), margin, y)
+  y += lineHeight + 2
+
+  // Conversation messages
+  if (props.messages.length) {
+    addSubTitle('Debate messages')
+    props.messages.forEach((m) => {
+      const speakerLabel = m.speaker === 'agent_pro' ? 'Pro' : m.speaker === 'agent_con' ? 'Con' : m.speaker
+      const header = `Trial ${m.trial}, Round ${m.round} - ${speakerLabel}`
+      addTextBlock(header, { bold: true, extraGap: 0 })
+      addTextBlock(m.content, { bold: false, extraGap: 2 })
+    })
+  }
+
+  // Summary sections (pros / cons / tips)
+  if (props.summary) {
+    addSubTitle('Judge summary')
+
+    if (props.summary.pros?.length) {
+      addTextBlock('Pros analysis', { bold: true, extraGap: 1 })
+      props.summary.pros.forEach((item) => {
+        const line = `${item.point}: ${item.description}`
+        addTextBlock(`- ${line}`, { extraGap: 1 })
+      })
+    }
+
+    if (props.summary.cons?.length) {
+      addTextBlock('Cons analysis', { bold: true, extraGap: 1 })
+      props.summary.cons.forEach((item) => {
+        const line = `${item.point}: ${item.description}`
+        addTextBlock(`- ${line}`, { extraGap: 1 })
+      })
+    }
+
+    if (props.summary.improvement_tips?.length) {
+      addTextBlock('Improvement tips', { bold: true, extraGap: 1 })
+      props.summary.improvement_tips.forEach((tip) => {
+        addTextBlock(`- ${tip}`, { extraGap: 1 })
+      })
+    }
+  }
+
+  const filename = `debate-report-${Date.now()}.pdf`
+  doc.save(filename)
 }
 </script>
 
@@ -78,18 +185,13 @@ function severityClass(severity) {
             </ul>
           </div>
         </div>
-        <div class="mt-6 flex gap-3">
+        <div class="mt-6 flex justify-end">
           <button
             type="button"
-            class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 rounded-lg text-sm transition-colors border border-slate-200"
+            class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 px-4 rounded-lg text-sm transition-colors border border-slate-200"
+            @click="exportPdf"
           >
             Export report (PDF)
-          </button>
-          <button
-            type="button"
-            class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 rounded-lg text-sm transition-colors border border-slate-200"
-          >
-            Share conversation
           </button>
         </div>
       </div>

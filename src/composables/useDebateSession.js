@@ -14,6 +14,9 @@ const status = ref('idle') // 'idle' | 'starting' | 'streaming' | 'done' | 'erro
 const error = ref(null)
 const messages = ref([])
 const summary = ref(null)
+// Tracks user-selected limits for current session (for header / display)
+const maxRoundsConfig = ref(3)
+const maxTrialsConfig = ref(1)
 
 export function useDebateSession() {
   let cancelStream = null
@@ -40,6 +43,8 @@ export function useDebateSession() {
 
       const maxRounds = Number(payload.max_rounds) || 3
       const trialCount = Number(payload.trial) || 1
+      maxRoundsConfig.value = maxRounds
+      maxTrialsConfig.value = trialCount
 
       const { addEntry } = useDebateHistory()
       addEntry({
@@ -82,6 +87,8 @@ export function useDebateSession() {
     error.value = null
     messages.value = []
     summary.value = null
+    maxRoundsConfig.value = 3
+    maxTrialsConfig.value = 1
   }
 
   return {
@@ -90,6 +97,8 @@ export function useDebateSession() {
     error: readonly(error),
     messages: readonly(messages),
     summary: readonly(summary),
+    maxRoundsConfig: readonly(maxRoundsConfig),
+    maxTrialsConfig: readonly(maxTrialsConfig),
     startDebateRun,
     reset,
   }

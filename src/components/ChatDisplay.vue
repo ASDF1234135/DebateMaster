@@ -12,6 +12,12 @@ const props = defineProps({
   isStreaming: { type: Boolean, default: false },
   /** Max rounds for header display (per trial) */
   maxRounds: { type: Number, default: 3 },
+  /** Max trials for header display */
+  maxTrials: { type: Number, default: 1 },
+  /** Live current round from parent (0 before start) */
+  currentRound: { type: Number, default: 0 },
+  /** Live current trial from parent (0 before start) */
+  currentTrial: { type: Number, default: 0 },
 })
 
 const emit = defineEmits(['update:selectedTrial'])
@@ -20,12 +26,6 @@ function onTrialChange(e) {
   const val = e.target?.value
   if (val != null) emit('update:selectedTrial', Number(val))
 }
-
-const currentRound = computed(() => {
-  if (props.messages.length === 0) return 0
-  const last = props.messages[props.messages.length - 1]
-  return last.round ?? 0
-})
 
 const isThinking = computed(() => {
   if (!props.isStreaming || props.messages.length === 0) return false
@@ -49,7 +49,7 @@ function speakerLabel(speaker) {
           class="w-2 h-2 rounded-full"
           :class="isStreaming ? 'bg-green-500 animate-pulse' : 'bg-slate-400'"
         />
-        Debate {{ isStreaming ? 'in progress' : 'arena' }} (Round {{ currentRound }}/{{ maxRounds }})
+        Debate {{ isStreaming ? 'in progress' : 'arena' }} (Round {{ currentRound }}/{{ maxRounds }}, Trial {{ currentTrial }}/{{ maxTrials }})
       </h2>
       <div class="flex items-center gap-2">
         <label class="text-xs font-medium text-slate-500" for="trial-select">Trial</label>
