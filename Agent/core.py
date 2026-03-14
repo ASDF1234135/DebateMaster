@@ -57,7 +57,8 @@ async def init_node(state: DebateState) -> Dict:
             3. The opposing side's prompt must emphasize "absolutely not agreeing with the affirmative side's core arguments and constantly finding fault."
             4. The affirmative side's prompt must emphasize 'maintaining a firm stance and counterattacking the opposing side's weaknesses.'
             5. You must output the result in JSON format with exactly these two keys: "pro_system_prompt" and "con_system_prompt".
-            6. You need to ensure that both sides fully understand the context and prompts, as well as their core arguments."""
+            6. You need to ensure that both sides fully understand the context and prompts, as well as their core arguments.
+            7. You should encourage both sides to omit polite language and focus on the debate itself."""
 
     user_msg = f"""
             Debate Topic: {state['prompt']}
@@ -80,7 +81,6 @@ async def init_node(state: DebateState) -> Dict:
 
 async def pro_node(state: DebateState) -> Dict:
     messages = [SystemMessage(content=state["pro_sys_prompt"])]
-    
     current_trial = state["current_trial"]
     trial_history = [msg for msg in state["history"] if msg.get("trial") == current_trial]
     
@@ -101,7 +101,10 @@ async def pro_node(state: DebateState) -> Dict:
 
 async def con_node(state: DebateState) -> Dict:
     messages = [SystemMessage(content=state["con_sys_prompt"])]
-    for msg in state["history"]:
+    current_trial = state["current_trial"]
+    trial_history = [msg for msg in state["history"] if msg.get("trial") == current_trial]
+    
+    for msg in trial_history:
         prefix = "Aff(Opponent):" if msg["speaker"] == "agent_pro" else "Neg: "
         messages.append(HumanMessage(content=f"{prefix}{msg['content']}"))
 
@@ -113,7 +116,7 @@ async def con_node(state: DebateState) -> Dict:
             "speaker": "agent_con",
             "content": response.content,
             "round": state["current_round"], 
-            "trial": state["trial"]
+            "trial": current_trial 
         }]
     }
 
@@ -121,18 +124,21 @@ async def judge_node(state: DebateState) -> Dict:
     sys_prompt = """You are an objective reviewer. 
         Please read the entire debate's history (which may contain multiple trials/parallel universes).
         Analyze the overall strengths and weaknesses of the affirmative (user's) arguments across all trials, 
-        and provide specific suggestions for improvement.
+        and provide specific suggestions for improving the affirmative side's initial arguments.
         Please strictly adhere to the specified JSON format for output."""
 
     history_text = ""
     for t in range(1, state["current_trial"] + 1):
         history_text += f"\n--- Trial {t} ---\n"
         t_hist = [m for m in state["history"] if m.get("trial") == t]
-        history_text += "\n".join([f"{m['speaker']} (Round {m['round']}): {m['content']}" for m in t_hist])
+        history_text += "\n".join([f"{m['speaker']} (Round {m['round']}): {m['content']}" for m in t_hist])\
+    
+    initial_arguments = f"""{state['prompt']} \n\n {state.get('context', 'None')}"""
 
     messages = [
         SystemMessage(content=sys_prompt),
-        HumanMessage(content=f"Debate history: \n{history_text}")
+        HumanMessage(content=f"Debate history: \n{history_text}"),
+        HumanMessage(content=f"Initial Arguments: \n{initial_arguments}")
     ]
 
     structured_response = await judge_llm.ainvoke(messages)

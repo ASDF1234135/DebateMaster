@@ -12,7 +12,7 @@ async def main():
         "my_persona": "一位注重數據佐證、強調數位協作工具效率的年輕專案經理。",
         "opponent_persona": "一位傳統、極度重視「實體見面三分情」與隨機腦力激盪的資深營運總監，對遠端工作抱持高度不信任。",
         "max_rounds": 4, 
-        "trial": 2
+        "trial": 1
     }
 
     print("-" * 50)
