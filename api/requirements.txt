@@ -1,0 +1,6 @@
+langgraph 
+langchain-openai 
+pydantic
+dotenv
+fastapi[all]
+psycopg2-binary
