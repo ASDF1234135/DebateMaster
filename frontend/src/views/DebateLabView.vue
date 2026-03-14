@@ -11,6 +11,8 @@ const {
   error,
   messages,
   summary,
+  maxRoundsConfig,
+  maxTrialsConfig,
   startDebateRun,
   reset,
 } = useDebateSession()
@@ -20,19 +22,33 @@ const selectedTrial = ref(1)
 const isFormDisabled = computed(() => status.value === 'starting' || status.value === 'streaming')
 const isStreaming = computed(() => status.value === 'streaming')
 
+// Total rounds/trials from user config
+const maxRounds = computed(() => maxRoundsConfig.value || 3)
+const maxTrials = computed(() => maxTrialsConfig.value || 1)
+
+// Trial options for dropdown: prefer observed trials, otherwise 1..maxTrials
 const trialOptions = computed(() => {
-  const trials = [...new Set(messages.value.map((m) => m.trial).filter(Boolean))].sort((a, b) => a - b)
-  return trials.length ? trials : [1]
+  const observed = [...new Set(messages.value.map((m) => m.trial).filter(Boolean))].sort((a, b) => a - b)
+  if (observed.length) return observed
+  const n = maxTrials.value
+  return Array.from({ length: n }, (_, i) => i + 1)
 })
 
 const filteredMessages = computed(() =>
   messages.value.filter((m) => m.trial === selectedTrial.value)
 )
 
-const maxRounds = computed(() => {
-  if (filteredMessages.value.length === 0) return 3
-  const max = Math.max(...filteredMessages.value.map((m) => m.round || 0), 1)
-  return max
+// Live progress from latest streamed message (0 before any messages)
+const currentRound = computed(() => {
+  if (messages.value.length === 0) return 0
+  const last = messages.value[messages.value.length - 1]
+  return last.round ?? 0
+})
+
+const currentTrial = computed(() => {
+  if (messages.value.length === 0) return 0
+  const last = messages.value[messages.value.length - 1]
+  return last.trial ?? 0
 })
 
 watch(trialOptions, (options) => {
@@ -75,9 +91,12 @@ function onFormSubmit(payload) {
             :selected-trial="selectedTrial"
             :is-streaming="isStreaming"
             :max-rounds="maxRounds"
+            :max-trials="maxTrials"
+            :current-round="currentRound"
+            :current-trial="currentTrial"
             @update:selected-trial="selectedTrial = $event"
           />
-          <ResultSummary :summary="summary" />
+          <ResultSummary :summary="summary" :messages="messages" />
         </div>
       </div>
     </main>
