@@ -5,10 +5,10 @@ from typing import Optional
 import uuid
 import json
 import asyncio
+from Agent.core import run_debate
 
 app = FastAPI()
 
-# 讓前端可以連線
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],   # 之後正式上線再改成你的前端網址
@@ -17,7 +17,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 暫時用記憶體存 session
 sessions = {}
 
 
@@ -27,7 +26,6 @@ async def root():
     return {
         "status": "ok",
         "message": "Debate Master API is running.",
-        "version": "1.0.0"
     }
 
 
@@ -42,7 +40,6 @@ async def start_debate(
 ):
     context = None
 
-    # 如果有上傳檔案，就把內容讀進來
     if file:
         file_bytes = await file.read()
         context = file_bytes.decode("utf-8", errors="ignore")
@@ -64,58 +61,7 @@ async def start_debate(
         "message": "Debate session created successfully."
     }
 
-# 模擬 AI 回傳
-async def fake_ai_generator(session):
-    prompt = session["prompt"]
-    opponent_persona = session["opponent_persona"]
-    max_rounds = session["max_rounds"]
-    trial = session["trial"]
 
-    for round_num in range(1, max_rounds + 1):
-        await asyncio.sleep(1)
-        yield {
-            "type": "conversation",
-            "speaker": "agent_pro",
-            "round": round_num,
-            "trial": trial,
-            "content": f"Pro side argument for: {prompt}"
-        }
-
-        await asyncio.sleep(1)
-        yield {
-            "type": "conversation",
-            "speaker": "agent_con",
-            "round": round_num,
-            "trial": trial,
-            "content": f"Con side rebuttal as persona: {opponent_persona}"
-        }
-
-    await asyncio.sleep(1)
-    yield {
-        "type": "summary",
-        "speaker": "agent_judge",
-        "pros": [
-            {
-                "point": "Clear argument",
-                "severity": "high",
-                "description": "The debate had a clear supporting argument."
-            }
-        ],
-        "cons": [
-            {
-                "point": "Weak evidence",
-                "severity": "mid",
-                "description": "Some claims need stronger support."
-            }
-        ],
-        "improvement_tips": [
-            "Use more examples.",
-            "Respond directly to counterarguments."
-        ]
-    }
-
-
-# 把資料格式轉成 SSE
 def format_sse(data: dict):
     return f"event: message\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
@@ -125,12 +71,20 @@ def format_sse(data: dict):
 async def stream_debate(session_id: str):
     if session_id not in sessions:
         raise HTTPException(status_code=404, detail="Session not found")
-
-    session = sessions[session_id]
+    session_config = sessions[session_id]
 
     async def event_generator():
-        async for item in fake_ai_generator(session):
-            yield format_sse(item)
+        try:
+            async for ai_event in run_debate(session_config):
+                yield format_sse(ai_event)
+                
+            
+        except Exception as e:
+            error_data = {
+                "type": "error",
+                "message": f"AI core error: {str(e)}"
+            }
+            yield format_sse(error_data)
 
     return StreamingResponse(
         event_generator(),
