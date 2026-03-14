@@ -11,7 +11,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # 之後正式上線再改成你的前端網址
+    allow_origins=["*"],   # 之後正式上線再改成你的前端網址 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
