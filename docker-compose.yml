@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./api
+    container_name: debate-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./api/.env 
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: debate-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
