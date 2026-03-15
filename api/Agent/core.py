@@ -9,12 +9,6 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
 
-from Agent.save_debate_to_db import (
-    DebateDBWriter,
-    normalize_session_config,
-    normalize_conversation_event,
-    normalize_summary_event,
-)
 
 
 class Point(BaseModel):
@@ -78,8 +72,8 @@ async def init_node(state: DebateState) -> Dict[str, Any]:
 Based on the provided debate topic, background information, and character profiles of both sides, tailor the most suitable System Prompts.
 
 Requirements:
-1. The System Prompt must instruct the Agent to strictly adhere to its character profile.
-2. The System Prompt must instruct the Agent to limit each statement to 500 words or less.
+1. The System Prompt must instruct the Agent to strictly adhere to its character profile. Includes "Context", "Argument" and "Profile & Persona" for each side.
+2. The System Prompt must instruct the Agent to limit each statement to 150 words or less in English.
 3. The opposing side's prompt must emphasize "absolutely not agreeing with the affirmative side's core arguments and constantly finding fault."
 4. The affirmative side's prompt must emphasize "maintaining a firm stance and counterattacking the opposing side's weaknesses."
 5. You must output the result in JSON format with exactly these two keys: "pro_system_prompt" and "con_system_prompt".
@@ -108,7 +102,13 @@ Negative Persona (Opponent Persona): {state.get('opponent_persona', 'A sharp que
 
 
 async def pro_node(state: DebateState) -> Dict[str, Any]:
-    messages = [SystemMessage(content=state["pro_sys_prompt"])]
+    full_sys_prompt = (
+        f"{state['pro_sys_prompt']}\n\n"
+        f"=== DEBATE TOPIC ===\n{state['prompt']}\n\n"
+        f"=== BACKGROUND CONTEXT ===\n{state.get('context', 'None')}"
+    )
+    messages = [SystemMessage(content=full_sys_prompt)]
+
     current_trial = state["current_trial"]
     trial_history = [msg for msg in state["history"] if msg.get("trial") == current_trial]
 
@@ -129,7 +129,13 @@ async def pro_node(state: DebateState) -> Dict[str, Any]:
 
 
 async def con_node(state: DebateState) -> Dict[str, Any]:
-    messages = [SystemMessage(content=state["con_sys_prompt"])]
+    full_sys_prompt = (
+        f"{state['con_sys_prompt']}\n\n"
+        f"=== DEBATE TOPIC ===\n{state['prompt']}\n\n"
+        f"=== BACKGROUND CONTEXT ===\n{state.get('context', 'None')}"
+    )
+    
+    messages = [SystemMessage(content=full_sys_prompt)]
     current_trial = state["current_trial"]
     trial_history = [msg for msg in state["history"] if msg.get("trial") == current_trial]
 
@@ -151,12 +157,18 @@ async def con_node(state: DebateState) -> Dict[str, Any]:
 
 
 async def judge_node(state: DebateState) -> Dict[str, Any]:
-    sys_prompt = """You are an objective reviewer.
-Please read the entire debate's history (which may contain multiple trials/parallel universes).
-Analyze the overall strengths and weaknesses of the affirmative (user's) arguments across all trials,
-and provide specific suggestions for improving the affirmative side's initial arguments.
-Please strictly adhere to the specified JSON format for output.
-"""
+    sys_prompt = """
+        You are an objective reviewer.
+        Please read the entire debate's history (which may contain multiple trials/parallel universes).
+        Analyze the overall strengths and weaknesses of the affirmative (user's) arguments across all trials,
+        and provide comprehensive and specific suggestions for improving the affirmative side's initial arguments.
+
+        In the strengths section, you should explain the user's key arguments and why they are strong. 
+        In the weaknesses section, you should explain the potential flaws in the user's arguments,
+        the reasons behind them, and how the opposing side might attack or challenge them.
+        
+        Please strictly adhere to the specified JSON format for output.
+        """
 
     history_text = ""
     for t in range(1, state["current_trial"] + 1):
@@ -224,17 +236,7 @@ builder.add_edge("agent_judge", END)
 graph = builder.compile()
 
 
-async def run_debate(config: dict, db_writer: Optional[DebateDBWriter] = None):
-    """
-    If db_writer is provided:
-    - use the provided writer
-
-    If db_writer is NOT provided:
-    - core will create its own DebateDBWriter automatically
-
-    Always yields the same event format for API / SSE use.
-    """
-    config = normalize_session_config(config)
+async def run_debate(config: dict):
 
     initial_state: DebateState = {
         "session_id": config["session_id"],
@@ -252,19 +254,8 @@ async def run_debate(config: dict, db_writer: Optional[DebateDBWriter] = None):
         "final_report": {},
     }
 
-    sequence_no = 1
-    owns_db_writer = False
 
     try:
-        # 如果 main / API 沒有傳 db_writer，就在 core 裡自己建立
-        if db_writer is None:
-            db_writer = DebateDBWriter()
-            owns_db_writer = True
-
-        # 先存 session
-        db_writer.insert_session(config)
-        db_writer.commit()
-
         async for event in graph.astream(initial_state):
             for node_name, node_update in event.items():
 
@@ -287,15 +278,6 @@ async def run_debate(config: dict, db_writer: Optional[DebateDBWriter] = None):
                         "content": latest_message["content"],
                     }
 
-                    message_event = normalize_conversation_event(event_data)
-                    db_writer.insert_message(
-                        config["session_id"],
-                        message_event,
-                        sequence_no,
-                    )
-                    db_writer.commit()
-                    sequence_no += 1
-
                     yield event_data
 
                 elif node_name == "agent_judge":
@@ -309,17 +291,8 @@ async def run_debate(config: dict, db_writer: Optional[DebateDBWriter] = None):
                         "improvement_tips": report["improvement_tips"],
                     }
 
-                    summary_event = normalize_summary_event(event_data)
-                    db_writer.insert_summary(config["session_id"], summary_event)
-                    db_writer.commit()
 
                     yield event_data
 
     except Exception:
-        if db_writer:
-            db_writer.rollback()
         raise
-
-    finally:
-        if owns_db_writer and db_writer:
-            db_writer.close()

@@ -2,3 +2,13 @@
 .env
 *\__pycache__
 */node_modules
+.ideanode_modules/
+node_modules
+node_modules/
+frontend/node_modules/
+.vite/
+frontend/dist/
+dist/
+.env
+.DS_Store
+/.vite

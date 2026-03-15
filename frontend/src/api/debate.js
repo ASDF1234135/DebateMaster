@@ -92,3 +92,24 @@ export function streamDebate(sessionId, { onMessage, onComplete }) {
     eventSource.close()
   }
 }
+
+/**
+ * GET /api/v1/debates - list all debate sessions (for History)
+ * @returns {Promise<{ status: string, data: Array<{ session_id, prompt, my_persona, opponent_persona, max_round, max_trial }> }>}
+ */
+export async function getDebates() {
+  const response = await fetch(`${API_BASE_URL}/api/v1/debates`)
+  if (!response.ok) throw new Error(`API Error: ${response.status}`)
+  return response.json()
+}
+
+/**
+ * GET /api/v1/debates/{session_id}/messages - get messages and summary for a session
+ * @param {string} sessionId
+ * @returns {Promise<{ status: string, data: Array<{ type, speaker?, round?, trial?, content?, pros?, cons?, improvement_tips? }> }>}
+ */
+export async function getDebateMessages(sessionId) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/debates/${encodeURIComponent(sessionId)}/messages`)
+  if (!response.ok) throw new Error(`API Error: ${response.status}`)
+  return response.json()
+}
