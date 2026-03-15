@@ -16,9 +16,9 @@ class DebateDBWriter:
         self.conn = psycopg2.connect(
             host=os.getenv("DB_HOST", "localhost"),
             port=os.getenv("DB_PORT", "5432"),
-            dbname=os.getenv("DB_NAME", "postgres"),
-            user=os.getenv("DB_USER", "postgres"),
-            password=os.getenv("DB_PASSWORD", "postgres"),
+            dbname=os.getenv("POSTGRES_DB", "postgres"),
+            user=os.getenv("POSTGRES_USER", "postgres"),
+            password=os.getenv("POSTGRES_PASSWORD", "postgres"),
         )
         self.conn.autocommit = False
 
@@ -117,6 +117,96 @@ class DebateDBWriter:
 
         with self.conn.cursor() as cur:
             cur.execute(sql, values)
+
+    def get_sessions(self) -> List[Dict[str, Any]]:
+        sql = """
+        SELECT
+            session_id,
+            prompt,
+            my_persona,
+            opponent_persona,
+            max_rounds,
+            trial
+        FROM debate_sessions
+        ORDER BY session_id DESC
+        """
+
+        with self.conn.cursor() as cur:
+            cur.execute(sql)
+            rows = cur.fetchall()
+
+        results: List[Dict[str, Any]] = []
+        for row in rows:
+            results.append({
+                "session_id": row[0],
+                "prompt": row[1],
+                "my_persona": row[2],
+                "opponent_persona": row[3],
+                "max_round": row[4],
+                "max_trial": row[5],
+            })
+
+        return results
+
+    def get_messages_and_summary(self, session_id: str) -> List[Dict[str, Any]]:
+        results: List[Dict[str, Any]] = []
+
+        message_sql = """
+        SELECT
+            type,
+            speaker,
+            round,
+            trial,
+            content,
+            sequence_no
+        FROM debate_messages
+        WHERE session_id = %s
+        ORDER BY sequence_no ASC
+        """
+
+        summary_sql = """
+        SELECT
+            type,
+            speaker,
+            pros,
+            cons,
+            improvement_tips
+        FROM debate_summaries
+        WHERE session_id = %s
+        """
+
+        with self.conn.cursor() as cur:
+            cur.execute(message_sql, (session_id,))
+            message_rows = cur.fetchall()
+
+            for row in message_rows:
+                results.append({
+                    "type": row[0],
+                    "speaker": row[1],
+                    "round": row[2],
+                    "trial": row[3],
+                    "content": row[4],
+                })
+
+            cur.execute(summary_sql, (session_id,))
+            summary_row = cur.fetchone()
+
+            if summary_row:
+                results.append({
+                    "type": summary_row[0],
+                    "speaker": summary_row[1],
+                    "pros": summary_row[2] if summary_row[2] is not None else [],
+                    "cons": summary_row[3] if summary_row[3] is not None else [],
+                    "improvement_tips": summary_row[4] if summary_row[4] is not None else [],
+                })
+
+        return results
+
+    def getSessions(self) -> List[Dict[str, Any]]:
+        return self.get_sessions()
+
+    def getMessagesAndSummary(self, session_id: str) -> List[Dict[str, Any]]:
+        return self.get_messages_and_summary(session_id)
 
 
 def normalize_session_config(config: Dict[str, Any]) -> Dict[str, Any]:
