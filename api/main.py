@@ -7,6 +7,9 @@ import json
 
 from Agent.core import run_debate
 
+
+
+
 # 匯入你的 DB 寫入工具
 from DB.save_debate_to_db import (
     DebateDBWriter,
@@ -16,6 +19,7 @@ from DB.save_debate_to_db import (
 )
 
 app = FastAPI()
+db = DebateDBWriter()
 
 app.add_middleware(
     CORSMiddleware,
@@ -153,7 +157,7 @@ async def stream_debate(session_id: str):
 async def get_debates():
 
     try:
-        debates = get_all_debates()
+        debates = db.get_sessions()
 
         return {
             "status": "success",
@@ -171,7 +175,7 @@ async def get_debates():
 async def get_debate_messages_api(session_id: str):
 
     try:
-        messages = get_debate_messages(session_id)
+        messages = db.get_messages_and_summary(session_id)
 
         return {
             "status": "success",
