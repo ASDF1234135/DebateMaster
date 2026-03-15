@@ -1,0 +1,12 @@
+{
+  "name": "debate-master",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "preview": "npm run preview --prefix frontend"
+  },
+  "dependencies": {
+    "ogl": "^1.0.11"
+  }
+}

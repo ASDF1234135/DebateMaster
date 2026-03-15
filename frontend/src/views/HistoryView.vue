@@ -121,35 +121,22 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bg-slate-50 text-slate-900 min-h-screen flex flex-col">
-    <main class="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8 flex-1 w-full">
-      <!-- List view: all sections -->
-      <template v-if="selectedSession == null">
+  <div class="min-h-screen text-slate-900 flex flex-col">
+    <main class="max-w-3xl mx-auto px-4 py-8 sm:px-6 lg:px-8 flex-1 w-full">
+      <!-- 歷史區放在半透明底板上 -->
+      <div class="rounded-2xl bg-white/85 backdrop-blur-xl shadow-xl border border-white/20 p-6 sm:p-8">
         <div class="flex items-center justify-between mb-8">
           <h1 class="text-2xl font-bold text-slate-800">History</h1>
           <button
+            v-if="history.length"
             type="button"
-            class="text-sm text-slate-500 hover:text-blue-600 transition-colors"
-            @click="goToStart"
+            class="text-sm text-slate-500 hover:text-red-600 transition-colors"
+            @click="clearHistory"
           >
-            Start new debate
+            Clear history
           </button>
         </div>
-
-        <div v-if="loading" class="rounded-2xl border border-slate-200 bg-white p-12 text-center">
-          <p class="text-slate-500">Loading...</p>
-        </div>
-        <div v-else-if="loadError" class="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
-          <p class="text-red-700">{{ loadError }}</p>
-          <button
-            type="button"
-            class="mt-3 text-sm text-red-600 hover:underline"
-            @click="fetchDebates"
-          >
-            Retry
-          </button>
-        </div>
-        <div v-else-if="!debates.length" class="rounded-2xl border border-slate-200 bg-white p-12 text-center">
+        <div v-if="!history.length" class="rounded-xl border border-slate-200 bg-white/60 p-12 text-center">
           <p class="text-slate-500 mb-4">No past debates yet.</p>
           <button
             type="button"
@@ -161,66 +148,17 @@ onMounted(() => {
         </div>
         <ul v-else class="space-y-4">
           <li
-            v-for="(item, index) in debates"
-            :key="item.session_id + index"
-            class="rounded-xl border border-slate-200 bg-white p-4 hover:border-blue-300 hover:bg-slate-50/50 transition-colors cursor-pointer"
-            @click="openSection(item)"
+            v-for="(item, index) in history"
+            :key="item.sessionId + index"
+            class="rounded-xl border border-slate-200 bg-white/70 p-4 hover:border-slate-300 hover:bg-white/90 transition-colors"
           >
-            <p class="text-slate-800 font-medium">{{ promptPreview(item.prompt) }}</p>
+            <p class="text-slate-800">{{ promptPreview(item.prompt) }}</p>
             <p class="text-sm text-slate-400 mt-2">
-              {{ item.max_round ?? 3 }} rounds, {{ item.max_trial ?? 1 }} trial(s)
+              {{ formatDate(item.startedAt) }} · {{ item.maxRounds }} rounds, {{ item.trial }} trial(s)
             </p>
           </li>
         </ul>
-      </template>
-
-      <!-- Detail view: selected section + trial selector + content -->
-      <template v-else>
-        <div class="mb-6 flex items-center gap-4">
-          <button
-            type="button"
-            class="text-sm text-slate-600 hover:text-blue-600 transition-colors"
-            @click="backToList"
-          >
-            Back to list
-          </button>
-          <h1 class="text-xl font-bold text-slate-800 truncate flex-1">
-            {{ promptPreview(selectedSession.prompt, 80) }}
-          </h1>
-        </div>
-
-        <div v-if="loadingDetail" class="rounded-2xl border border-slate-200 bg-white p-12 text-center">
-          <p class="text-slate-500">Loading section...</p>
-        </div>
-        <div v-else-if="detailError" class="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
-          <p class="text-red-700">{{ detailError }}</p>
-          <button
-            type="button"
-            class="mt-3 text-sm text-red-600 hover:underline"
-            @click="openSection(selectedSession)"
-          >
-            Retry
-          </button>
-        </div>
-        <div v-else class="space-y-8">
-          <ChatDisplay
-            :messages="filteredMessages"
-            :trial-options="trialOptions"
-            :selected-trial="selectedTrial"
-            :is-streaming="false"
-            :max-rounds="maxRounds"
-            :max-trials="maxTrials"
-            :current-round="currentRound"
-            :current-trial="currentTrial"
-            @update:selected-trial="selectedTrial = $event"
-          />
-          <ResultSummary
-            v-if="sessionData?.summary"
-            :summary="sessionData.summary"
-            :messages="sessionData.messages"
-          />
-        </div>
-      </template>
+      </div>
     </main>
   </div>
 </template>

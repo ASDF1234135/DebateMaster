@@ -27,3 +27,64 @@ body {
   background-color: #cbd5e1;
   border-radius: 20px;
 }
+
+/* From Uiverse.io by Madflows */
+.btn-madflows {
+  position: relative;
+  overflow: hidden;
+  height: 3rem;
+  padding: 0 2rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.28);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s;
+}
+.btn-madflows:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.btn-madflows-content {
+  position: relative;
+  z-index: 1;
+}
+.btn-madflows::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  width: 100%;
+  height: inherit;
+  border-radius: inherit;
+  background: linear-gradient(
+    82.3deg,
+    rgba(150, 93, 233, 1) 10.8%,
+    rgba(99, 88, 238, 1) 94.3%
+  );
+  transition: transform 0.475s;
+}
+.btn-madflows:hover:not(:disabled)::before {
+  transform: scaleX(1);
+}
+.btn-madflows:hover:not(:disabled) .btn-madflows-content {
+  color: #fff;
+}
+/* 透明底黑字 + 看得出是按鈕（Simulation 區的 Start debate）*/
+.btn-madflows--transparent {
+  background: rgba(248, 250, 252, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+.btn-madflows--transparent .btn-madflows-content {
+  color: #1e293b;
+}

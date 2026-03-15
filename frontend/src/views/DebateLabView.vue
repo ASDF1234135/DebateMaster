@@ -64,39 +64,44 @@ function onFormSubmit(payload) {
 </script>
 
 <template>
-  <div class="bg-slate-50 text-slate-900 flex flex-col flex-1">
+  <div class="min-h-screen text-slate-900 flex flex-col flex-1">
     <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 flex-1 w-full">
-      <!-- Error banner -->
+      <!-- 互動區放在半透明底板上，對話框不直接疊在動效上 -->
       <div
-        v-if="error"
-        class="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-center justify-between gap-4"
+        class="rounded-2xl bg-white/85 backdrop-blur-xl shadow-xl border border-white/20 p-6 sm:p-8"
       >
-        <span>{{ error }}</span>
-        <button
-          type="button"
-          class="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-          @click="reset"
+        <!-- Error banner -->
+        <div
+          v-if="error"
+          class="mb-6 p-4 rounded-xl bg-red-50/95 border border-red-200 text-red-800 text-sm flex items-center justify-between gap-4"
         >
-          Dismiss
-        </button>
-      </div>
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div class="lg:col-span-4">
-          <SimulationForm :disabled="isFormDisabled" @submit="onFormSubmit" />
+          <span>{{ error }}</span>
+          <button
+            type="button"
+            class="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+            @click="reset"
+          >
+            Dismiss
+          </button>
         </div>
-        <div class="lg:col-span-8 space-y-8">
-          <ChatDisplay
-            :messages="filteredMessages"
-            :trial-options="trialOptions"
-            :selected-trial="selectedTrial"
-            :is-streaming="isStreaming"
-            :max-rounds="maxRounds"
-            :max-trials="maxTrials"
-            :current-round="currentRound"
-            :current-trial="currentTrial"
-            @update:selected-trial="selectedTrial = $event"
-          />
-          <ResultSummary :summary="summary" :messages="messages" />
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div class="lg:col-span-4">
+            <SimulationForm :disabled="isFormDisabled" @submit="onFormSubmit" />
+          </div>
+          <div class="lg:col-span-8 space-y-8">
+            <ChatDisplay
+              :messages="filteredMessages"
+              :trial-options="trialOptions"
+              :selected-trial="selectedTrial"
+              :is-streaming="isStreaming"
+              :max-rounds="maxRounds"
+              :max-trials="maxTrials"
+              :current-round="currentRound"
+              :current-trial="currentTrial"
+              @update:selected-trial="selectedTrial = $event"
+            />
+            <ResultSummary :summary="summary" :messages="messages" />
+          </div>
         </div>
       </div>
     </main>

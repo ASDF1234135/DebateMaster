@@ -57,7 +57,7 @@ function onSubmit(e) {
   <aside class="space-y-6" data-purpose="simulation-settings">
     <section class="glass-card rounded-2xl p-6 shadow-sm border border-slate-200">
       <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
-        <svg class="h-5 w-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <svg class="h-5 w-5 text-slate-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
         </svg>
         Simulation settings
@@ -161,23 +161,17 @@ function onSubmit(e) {
             </select>
           </div>
         </div>
-        <div class="pt-2">
-          <span class="block text-sm font-medium text-slate-700 mb-2">Model configuration</span>
-          <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-            <span class="text-xs text-slate-500">AI A: GPT-4o</span>
-            <span class="text-xs text-slate-400">vs</span>
-            <span class="text-xs text-slate-500">AI B: Claude 3.5</span>
-          </div>
-        </div>
         <button
           type="submit"
-          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 mt-4 disabled:opacity-50 disabled:pointer-events-none"
+          class="btn-madflows btn-madflows--transparent w-full mt-4"
           :disabled="disabled"
         >
-          <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-            <path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" fill-rule="evenodd" />
-          </svg>
-          Start debate
+          <span class="btn-madflows-content flex items-center justify-center gap-2">
+            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+              <path clip-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" fill-rule="evenodd" />
+            </svg>
+            Start debate
+          </span>
         </button>
       </form>
     </section>
