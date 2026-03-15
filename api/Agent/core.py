@@ -9,12 +9,6 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
 
-from Agent.save_debate_to_db import (
-    DebateDBWriter,
-    normalize_session_config,
-    normalize_conversation_event,
-    normalize_summary_event,
-)
 
 
 class Point(BaseModel):
@@ -224,17 +218,7 @@ builder.add_edge("agent_judge", END)
 graph = builder.compile()
 
 
-async def run_debate(config: dict, db_writer: Optional[DebateDBWriter] = None):
-    """
-    If db_writer is provided:
-    - use the provided writer
-
-    If db_writer is NOT provided:
-    - core will create its own DebateDBWriter automatically
-
-    Always yields the same event format for API / SSE use.
-    """
-    config = normalize_session_config(config)
+async def run_debate(config: dict):
 
     initial_state: DebateState = {
         "session_id": config["session_id"],
@@ -252,19 +236,8 @@ async def run_debate(config: dict, db_writer: Optional[DebateDBWriter] = None):
         "final_report": {},
     }
 
-    sequence_no = 1
-    owns_db_writer = False
 
     try:
-        # 如果 main / API 沒有傳 db_writer，就在 core 裡自己建立
-        if db_writer is None:
-            db_writer = DebateDBWriter()
-            owns_db_writer = True
-
-        # 先存 session
-        db_writer.insert_session(config)
-        db_writer.commit()
-
         async for event in graph.astream(initial_state):
             for node_name, node_update in event.items():
 
@@ -287,15 +260,6 @@ async def run_debate(config: dict, db_writer: Optional[DebateDBWriter] = None):
                         "content": latest_message["content"],
                     }
 
-                    message_event = normalize_conversation_event(event_data)
-                    db_writer.insert_message(
-                        config["session_id"],
-                        message_event,
-                        sequence_no,
-                    )
-                    db_writer.commit()
-                    sequence_no += 1
-
                     yield event_data
 
                 elif node_name == "agent_judge":
@@ -309,17 +273,8 @@ async def run_debate(config: dict, db_writer: Optional[DebateDBWriter] = None):
                         "improvement_tips": report["improvement_tips"],
                     }
 
-                    summary_event = normalize_summary_event(event_data)
-                    db_writer.insert_summary(config["session_id"], summary_event)
-                    db_writer.commit()
 
                     yield event_data
 
     except Exception:
-        if db_writer:
-            db_writer.rollback()
         raise
-
-    finally:
-        if owns_db_writer and db_writer:
-            db_writer.close()
