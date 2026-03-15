@@ -72,8 +72,8 @@ async def init_node(state: DebateState) -> Dict[str, Any]:
 Based on the provided debate topic, background information, and character profiles of both sides, tailor the most suitable System Prompts.
 
 Requirements:
-1. The System Prompt must instruct the Agent to strictly adhere to its character profile.
-2. The System Prompt must instruct the Agent to limit each statement to 500 words or less.
+1. The System Prompt must instruct the Agent to strictly adhere to its character profile. Includes "Context", "Argument" and "Profile & Persona" for each side.
+2. The System Prompt must instruct the Agent to limit each statement to 150 words or less in English.
 3. The opposing side's prompt must emphasize "absolutely not agreeing with the affirmative side's core arguments and constantly finding fault."
 4. The affirmative side's prompt must emphasize "maintaining a firm stance and counterattacking the opposing side's weaknesses."
 5. You must output the result in JSON format with exactly these two keys: "pro_system_prompt" and "con_system_prompt".
@@ -102,7 +102,13 @@ Negative Persona (Opponent Persona): {state.get('opponent_persona', 'A sharp que
 
 
 async def pro_node(state: DebateState) -> Dict[str, Any]:
-    messages = [SystemMessage(content=state["pro_sys_prompt"])]
+    full_sys_prompt = (
+        f"{state['pro_sys_prompt']}\n\n"
+        f"=== DEBATE TOPIC ===\n{state['prompt']}\n\n"
+        f"=== BACKGROUND CONTEXT ===\n{state.get('context', 'None')}"
+    )
+    messages = [SystemMessage(content=full_sys_prompt)]
+
     current_trial = state["current_trial"]
     trial_history = [msg for msg in state["history"] if msg.get("trial") == current_trial]
 
@@ -123,7 +129,13 @@ async def pro_node(state: DebateState) -> Dict[str, Any]:
 
 
 async def con_node(state: DebateState) -> Dict[str, Any]:
-    messages = [SystemMessage(content=state["con_sys_prompt"])]
+    full_sys_prompt = (
+        f"{state['con_sys_prompt']}\n\n"
+        f"=== DEBATE TOPIC ===\n{state['prompt']}\n\n"
+        f"=== BACKGROUND CONTEXT ===\n{state.get('context', 'None')}"
+    )
+    
+    messages = [SystemMessage(content=full_sys_prompt)]
     current_trial = state["current_trial"]
     trial_history = [msg for msg in state["history"] if msg.get("trial") == current_trial]
 
@@ -145,12 +157,18 @@ async def con_node(state: DebateState) -> Dict[str, Any]:
 
 
 async def judge_node(state: DebateState) -> Dict[str, Any]:
-    sys_prompt = """You are an objective reviewer.
-Please read the entire debate's history (which may contain multiple trials/parallel universes).
-Analyze the overall strengths and weaknesses of the affirmative (user's) arguments across all trials,
-and provide specific suggestions for improving the affirmative side's initial arguments.
-Please strictly adhere to the specified JSON format for output.
-"""
+    sys_prompt = """
+        You are an objective reviewer.
+        Please read the entire debate's history (which may contain multiple trials/parallel universes).
+        Analyze the overall strengths and weaknesses of the affirmative (user's) arguments across all trials,
+        and provide comprehensive and specific suggestions for improving the affirmative side's initial arguments.
+
+        In the strengths section, you should explain the user's key arguments and why they are strong. 
+        In the weaknesses section, you should explain the potential flaws in the user's arguments,
+        the reasons behind them, and how the opposing side might attack or challenge them.
+        
+        Please strictly adhere to the specified JSON format for output.
+        """
 
     history_text = ""
     for t in range(1, state["current_trial"] + 1):
