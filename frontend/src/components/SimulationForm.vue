@@ -161,14 +161,6 @@ function onSubmit(e) {
             </select>
           </div>
         </div>
-        <div class="pt-2">
-          <span class="block text-sm font-medium text-slate-700 mb-2">Model configuration</span>
-          <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-            <span class="text-xs text-slate-500">AI A: GPT-4o</span>
-            <span class="text-xs text-slate-400">vs</span>
-            <span class="text-xs text-slate-500">AI B: Claude 3.5</span>
-          </div>
-        </div>
         <button
           type="submit"
           class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 mt-4 disabled:opacity-50 disabled:pointer-events-none"
