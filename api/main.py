@@ -90,3 +90,39 @@ async def stream_debate(session_id: str):
         event_generator(),
         media_type="text/event-stream"
     )
+
+#4. GET /api/v1/debates
+@app.get("/api/v1/debates")
+async def get_debates():
+
+    try:
+        debates = get_all_debates()
+
+        return {
+            "status": "success",
+            "data": debates
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch debates: {str(e)}"
+        )
+
+# 5. GET /api/v1/debates/{session_id}/messages
+@app.get("/api/v1/debates/{session_id}/messages")
+async def get_debate_messages_api(session_id: str):
+
+    try:
+        messages = get_debate_messages(session_id)
+
+        return {
+            "status": "success",
+            "data": messages
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch messages: {str(e)}"
+        )
